@@ -23,12 +23,13 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip3 install --user --upgrade Cython==0.29.33 virtualenv  # the --user should be removed if you do this in a venv
+          pip3 install --user --upgrade virtualenv  # the --user should be removed if you do this in a venv
           export PATH=$PATH:~/.local/bin/
       - name: Build
         run: |
           python3 -m virtualenv venv
           source venv/bin/activate
+          pip3 install --user --upgrade Cython==0.29.33
           pip3 install buildozer
           buildozer init
           yes | buildozer android debug
