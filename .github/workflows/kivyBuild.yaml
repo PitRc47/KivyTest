@@ -1,5 +1,5 @@
 name: Build Kivy
-runs-on: ubuntu-20.04
+
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
       - name: Update dependencies
