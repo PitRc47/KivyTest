@@ -315,7 +315,7 @@ android.debug_artifact = apk
 #
 
 # (str) python-for-android URL to use for checkout
-p4a.url = https://github.com/PitRc47/python-for-android
+p4a.url = https://github.com/cbdj/python-for-android
 
 # (str) python-for-android fork to use in case if p4a.url is not specified, defaults to upstream (kivy)
 #p4a.fork = kivy
