@@ -36,9 +36,8 @@ jobs:
           source venv/bin/activate
           pip3 install Cython==0.29.33
           pip3 install buildozer
-          buildozer init
-          yes | buildozer android debug
+          buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4.6.0
         with:
-          path: .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/myapp/build/outputs/apk
+          path: .buildozer/android/platform/build-armeabi-v7a_arm64-v8a/dists/PhigrosPlayer/build/outputs/apk/debug/PhigrosPlayer-debug.apk
