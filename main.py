@@ -87,7 +87,7 @@ class GeckoViewContainer(BoxLayout):
         self.session = GeckoSession()
         self.session.open(self.runtime)
         self.gecko_view.setSession(self.session)
-        self.session.loadUri("http://192.168.11.148:8001/")
+        self.session.loadUri("https://bing.com/")
     
     def install_extension(self):
         controller = self.runtime.getWebExtensionController()
