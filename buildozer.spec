@@ -173,14 +173,14 @@ android.service_class_name = org.kivy.android.PythonService
 # their classes. Don't add jars that you do not need, since extra jars can slow
 # down the build process. Allows wildcards matching, for example:
 # OUYA-ODK/libs/*.jar
-android.add_jars = lib/pywebview-android.jar
+#android.add_jars = lib/pywebview-android.jar
 
 # (list) List of Java files to add to the android project (can be java or a
 # directory containing the files)
 #android.add_src = network_security_config.xml
 
 # (list) Android AAR archives to add
-#android.add_aars =
+android.add_aars = geckoview.aar
 
 # (list) Put these files or directories in the apk assets directory.
 # Either form may be used, and assets need not be in 'source.include_exts'.
