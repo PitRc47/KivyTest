@@ -6,6 +6,7 @@ from kivy.lang import Builder
 import json
 
 # Java classes import
+System = autoclass('java.lang.System')
 Context = autoclass('android.content.Context')
 GeckoView = autoclass('org.mozilla.geckoview.GeckoView')
 GeckoRuntime = autoclass('org.mozilla.geckoview.GeckoRuntime')
@@ -116,7 +117,7 @@ class GeckoViewContainer(BoxLayout):
                 msg = JSONObject()
                 msg.put("action", "evalJavascript")
                 msg.put("data", script)
-                msg.put("id", str(System.currentTimeMillis()))
+                msg.put("id", str(System.currentTimeMillis())) 
                 self.port.postMessage(msg)
             except Exception as e:
                 print("Error sending message:", e)
