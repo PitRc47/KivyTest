@@ -1,4 +1,4 @@
-from jnius import autoclass, PythonJavaClass, java_method
+from jnius import autoclass, PythonJavaClass, java_method # type: ignore
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import ObjectProperty
@@ -77,6 +77,14 @@ class GeckoViewContainer(BoxLayout):
         
         # Initialize Gecko
         self.init_gecko()
+        self.evaluate_javascript("""
+            window.appMessage = function(message) {
+                window.postMessage({
+                    action: "JSBridge",
+                    data: message
+                }, "*");
+            }
+        """)
     
     def init_gecko(self):
         context = autoclass('org.kivy.android.PythonActivity').mActivity
