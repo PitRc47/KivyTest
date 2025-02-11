@@ -201,7 +201,7 @@ android.service_class_name = org.kivy.android.PythonService
 # android.add_resources = network_security_config.xml
 
 # (list) Gradle dependencies to add
-android.gradle_dependencies = org.mozilla.geckoview:geckoview-Stable:135.0.20250130195129@aar
+android.gradle_dependencies = org.mozilla.geckoview:geckoview-stable:135.0.20250130195129@aar
 
 # (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
 # contains an 'androidx' package, or any package from Kotlin source.
