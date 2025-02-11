@@ -201,7 +201,7 @@ android.service_class_name = org.kivy.android.PythonService
 # android.add_resources = network_security_config.xml
 
 # (list) Gradle dependencies to add
-android.gradle_dependencies = org.mozilla.geckoview:geckoview:geckoview-135.0.20250130195129
+android.gradle_dependencies = org.mozilla.geckoview:geckoview-Stable:135.0.20250130195129
 
 # (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
 # contains an 'androidx' package, or any package from Kotlin source.
@@ -211,7 +211,7 @@ android.enable_androidx = True
 # (list) add java compile options
 # this can for example be necessary when importing certain java libraries using the 'android.gradle_dependencies' option
 # see https://developer.android.com/studio/write/java8-support for further information
-# android.add_compile_options = "sourceCompatibility = 1.8", "targetCompatibility = 1.8"
+android.add_compile_options = "sourceCompatibility = JavaVersion.VERSION_17", "targetCompatibility = JavaVersion.VERSION_17"
 
 # (list) Gradle repositories to add {can be necessary for some android.gradle_dependencies}
 # please enclose in double quotes 
