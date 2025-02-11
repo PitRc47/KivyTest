@@ -216,7 +216,7 @@ android.add_compile_options = "sourceCompatibility = JavaVersion.VERSION_17", "t
 # (list) Gradle repositories to add {can be necessary for some android.gradle_dependencies}
 # please enclose in double quotes 
 # e.g. android.gradle_repositories = "maven { url 'https://kotlin.bintray.com/ktor' }"
-android.add_gradle_repositories = "maven { url 'https://maven.mozilla.org/maven2' }"
+android.gradle_repositories = 'maven { url "https://maven.mozilla.org/maven2" }'
 
 # (list) packaging options to add 
 # see https://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.PackagingOptions.html
