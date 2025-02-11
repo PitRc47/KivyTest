@@ -180,7 +180,7 @@ android.service_class_name = org.kivy.android.PythonService
 #android.add_src = network_security_config.xml
 
 # (list) Android AAR archives to add
-#android.add_aars = ./geckoview-135.0.20250130195129.aar
+android.add_aars = ./geckoview-135.0.20250130195129.aar
 
 # (list) Put these files or directories in the apk assets directory.
 # Either form may be used, and assets need not be in 'source.include_exts'.
@@ -201,7 +201,7 @@ android.service_class_name = org.kivy.android.PythonService
 # android.add_resources = network_security_config.xml
 
 # (list) Gradle dependencies to add
-android.gradle_dependencies = org.mozilla.geckoview:geckoview-Stable:135
+#android.gradle_dependencies = org.mozilla.geckoview:geckoview-Stable:135
 
 # (bool) Enable AndroidX support. Enable when 'android.gradle_dependencies'
 # contains an 'androidx' package, or any package from Kotlin source.
@@ -216,7 +216,7 @@ android.add_compile_options = "sourceCompatibility = JavaVersion.VERSION_17", "t
 # (list) Gradle repositories to add {can be necessary for some android.gradle_dependencies}
 # please enclose in double quotes 
 # e.g. android.gradle_repositories = "maven { url 'https://kotlin.bintray.com/ktor' }"
-android.add_gradle_repositories = "maven { url 'https://maven.mozilla.org/maven2' }"
+#android.add_gradle_repositories = "maven { url 'https://maven.mozilla.org/maven2' }"
 
 # (list) packaging options to add 
 # see https://google.github.io/android-gradle-dsl/current/com.android.build.gradle.internal.dsl.PackagingOptions.html
