@@ -180,7 +180,7 @@ android.service_class_name = org.kivy.android.PythonService
 #android.add_src = network_security_config.xml
 
 # (list) Android AAR archives to add
-android.add_aars = geckoview.aar
+android.add_aars = lib/geckoview.aar
 
 # (list) Put these files or directories in the apk assets directory.
 # Either form may be used, and assets need not be in 'source.include_exts'.
