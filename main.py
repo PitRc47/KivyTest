@@ -10,10 +10,12 @@ from kivy.graphics.context_instructions import PushState, PopState
 from kivy.graphics.stencil_instructions import StencilPush, StencilPop, StencilUse
 from kivy.graphics import (
     RoundedRectangle, Color, Rectangle, Line,
-    Mesh, PushMatrix, PopMatrix
+    Mesh, PushMatrix, PopMatrix,
+    Rotate, Scale, Translate,
 )
 
 import re
+import math
 import copy
 
 class CSSColorParser:
@@ -472,9 +474,17 @@ class TextMetrics:
 class Canvas2DContext(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self._rotation = 0
+        self._scale_x = 1
+        self._scale_y = 1
+        self._translate_x = 0
+        self._translate_y = 0
+
         with self.canvas:
             Color(1, 1, 1, 1)
-            self.___rect = Rectangle(pos=self.pos, size=self.size)
+            self.___rect = Rectangle(pos=self.pos, size=self.size) # 白色背景
+
         self.bind(pos=self._update_rect, size=self._update_rect)
 
         self.reset()
@@ -560,6 +570,8 @@ class Canvas2DContext(Widget):
 
         # 使用 Stencil 指令定义裁剪区域
         with self.canvas:
+            PushMatrix()
+            self._applyMatrix()
             StencilPush()
 
             # 填充裁剪路径到 Stencil
@@ -577,6 +589,7 @@ class Canvas2DContext(Widget):
             
             StencilUse()
             StencilPop()
+            PopMatrix()
 
     def _load_texture(self, image):
         """加载不同格式的图像源为纹理"""
@@ -605,13 +618,16 @@ class Canvas2DContext(Widget):
     def clear_rect(self, x, y, width, height):
         """清除指定矩形区域的像素 模拟clearRect"""
         with self.canvas:
+            PushMatrix()
+            self._applyMatrix()
             Color(1, 1, 1, 1)  # 白色
             Rectangle(pos=(x, y), size=(width, height))
+            PopMatrix()
 
     def fill_rect(self, x, y, width, height):
-        matrix = Matrix().translate(12222, 0, 0)
         with self.canvas:
             PushMatrix()
+            self._applyMatrix()
             Color(*self.fill_style)
             Rectangle(pos=(x, y), size=(width, height))
             PopMatrix()
@@ -620,6 +636,7 @@ class Canvas2DContext(Widget):
     def stroke_rect(self, x, y, width, height):
         with self.canvas:
             PushMatrix()
+            self._applyMatrix()
             Color(*self.stroke_style)
             Line(width=self.line_width, rectangle=(x, y, width, height), close=True)
             PopMatrix()
@@ -653,6 +670,7 @@ class Canvas2DContext(Widget):
 
         with self.canvas:
             PushMatrix()
+            self._applyMatrix()
             Color(*self.fill_style)
             Rectangle(
                 pos=(pos_x, pos_y),
@@ -725,6 +743,7 @@ class Canvas2DContext(Widget):
         # 绘制描边（多偏移量绘制）
         with self.canvas:
             PushMatrix()
+            self._applyMatrix()
             Color(*self.stroke_style)
             for dx, dy in offsets:
                 # 应用缩放因子到偏移量
@@ -785,6 +804,7 @@ class Canvas2DContext(Widget):
         """填充所有子路径"""
         with self.canvas:
             PushState()
+            self._applyMatrix()
             self._apply_clip()
             
             Color(*self.fill_style)
@@ -804,6 +824,7 @@ class Canvas2DContext(Widget):
         """描边所有子路径"""
         with self.canvas:
             PushState()
+            self._applyMatrix()
             self._apply_clip()
             
             Color(*self.stroke_style)
@@ -822,17 +843,54 @@ class Canvas2DContext(Widget):
             self.clip_path = None
 
     #---------- 变换 API ----------
-    def rotate(self, degrees):
-        pass
+    def _rotatectx(self):
+        Rotate(angle=self._rotation, origin=self.center)
+
+    def rotate(self, angle):
+        """旋转操作"""
+        self._rotation += angle
+
+    def _scalectx(self):
+        Scale(x=self._scale_x, y=self._scale_y)
 
     def scale(self, sx, sy):
-        pass
+        """缩放操作"""
+        self._scale_x *= sx
+        self._scale_y *= sy
 
-    def translate(self, dx, dy):
-        pass
+    def _translatectx(self):
+        Translate(x=self._translate_x, y=self._translate_y)
+
+    def _applyMatrix(self):
+        self._rotatectx()
+        self._scalectx()
+        self._translatectx()
+
+    def translate(self, tx, ty):
+        """平移操作"""
+        self._translate_x += tx
+        self._translate_y += ty
+
+    def setTransform(self, a, b, c, d, tx, ty):
+        """设置变换属性"""
+        # 计算缩放
+        self._scale_x = math.sqrt(a * a + b * b)
+        self._scale_y = math.sqrt(c * c + d * d)
+
+        # 计算旋转角度
+        self._rotation = math.degrees(math.atan2(b, a))
+
+        # 平移
+        self._translate_x = tx
+        self._translate_y = ty
 
     def resetTransform(self):
-        pass
+        """重置变换操作"""
+        self._rotation = 0
+        self._scale_x = 1
+        self._scale_y = 1
+        self._translate_x = 0
+        self._translate_y = 0
 
     @property
     def global_alpha(self) -> float:
@@ -883,6 +941,7 @@ class Canvas2DContext(Widget):
 
         with self.canvas:
             PushMatrix()
+            self._applyMatrix()
             Color(1, 1, 1, 1)
             Rectangle(
                 texture=source_region,
@@ -938,6 +997,8 @@ if __name__ == '__main__':
     class ctxApp(App):
         def build(self, **kwargs):
             ctx.font = '50px MicrosoftYaHei'
+
+            """
             ctx.fill_style = 'red'
             ctx.fill_rect(10, 100, 30, 40)
             ctx.fill_style = '#000000'
@@ -967,7 +1028,14 @@ if __name__ == '__main__':
 
             ctx.draw_image("icon.ico", 0, 700)
 
+            """
 
+            ctx.translate(110, 30)
+            ctx.fill_style = "red"
+            ctx.fill_rect(0, 0, 80, 80)
+            ctx.setTransform(1, 0, 0, 1, 0, 0)
+            ctx.fill_style = "blue"
+            ctx.fill_rect(0, 0, 80, 80)
             return ctx
     
     ctxApp().run()
