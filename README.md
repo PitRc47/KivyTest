@@ -31,7 +31,7 @@ TODO:
 - [x] rect()
 - [ ] roundRect() ?
 - [x] fill()
-- [ ] stroke() ?
+- [x] stroke()
 - [ ] clip() ?
 
 ### 变换

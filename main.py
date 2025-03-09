@@ -824,16 +824,16 @@ class Canvas2DContext(Widget):
             PopState()
 
     def stroke(self) -> None:
-        """描边所有子路径"""
         with self.canvas:
             PushState()
-            self._applyMatrix()
+            self._applyMatrix()  # 应用所有变换（旋转/缩放/平移）
             self._apply_clip()
             
             Color(*self.stroke_style)
             for subpath in self.current_path:
                 if len(subpath) >= 2:
-                    points = [coord for p in subpath for coord in (p[0], self.height - p[1])]
+                    # 直接使用原始坐标，由变换矩阵处理
+                    points = [coord for p in subpath for coord in p]
                     Line(points=points, width=self.line_width)
             
             PopState()
