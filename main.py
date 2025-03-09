@@ -8,19 +8,12 @@ from kivy.graphics.texture import Texture
 from kivy.graphics.transformation import Matrix
 from kivy.graphics.context_instructions import PushState, PopState
 from kivy.graphics.stencil_instructions import StencilPush, StencilPop, StencilUse
-from kivy.graphics.opengl import glBlendFunc as BlendFunc
-from kivy.graphics.opengl import (
-    GL_ONE, GL_ZERO, 
-    GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA
-)
 from kivy.graphics import (
     RoundedRectangle, Color, Rectangle, Line,
     Mesh, PushMatrix, PopMatrix
 )
 
 import re
-import math
-import copy
 
 class CSSColorParser:
     COLORS = {
@@ -636,13 +629,6 @@ class Canvas2DContext(Widget):
             
             StencilUse()
             StencilPop()
-    
-    def _update_origin(self, dx, dy):
-        """更新原点跟踪（用于复杂变换）"""
-        self._current_origin = (
-            self._current_origin[0] + dx,
-            self._current_origin[1] + dy
-        )
 
     def _load_texture(self, image):
         """加载不同格式的图像源为纹理"""
@@ -653,17 +639,6 @@ class Canvas2DContext(Widget):
         if hasattr(image, "texture"):
             return image.texture
         raise TypeError("Unsupported image type")
-    
-    def _get_base_matrix(self):
-        base = Matrix()
-        base.translate(0, self.height, 0)
-        base.scale(1, -1, 1)
-        return base
-
-    def _apply_transform(self):
-        base = self._get_base_matrix()
-        total = base.multiply(self.current_matrix)
-        return total
 
     def reset(self):
         self._fill_style = (0, 0, 0, 1)
@@ -676,20 +651,14 @@ class Canvas2DContext(Widget):
         self._font = '10px sans-serif'
         self.current_path = []
         self.clip_path = None
-        self.current_matrix = Matrix()
-        self._current_origin = (0, 0)
         self._state_stack = []
     
     #---------- 基础绘图 API ----------
     def clear_rect(self, x, y, width, height):
         """清除指定矩形区域的像素 模拟clearRect"""
         with self.canvas:
-            # 使用替换混合模式，直接覆盖像素
-            BlendFunc(GL_ONE, GL_ZERO)
-            Color(1, 1, 1, 1)  # 透明颜色
+            Color(1, 1, 1, 1)  # 白色
             Rectangle(pos=(x, y), size=(width, height))
-            # 恢复默认混合模式（Alpha混合）
-            BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     def fill_rect(self, x, y, width, height):
         matrix = Matrix().translate(12222, 0, 0)
@@ -906,19 +875,16 @@ class Canvas2DContext(Widget):
 
     #---------- 变换 API ----------
     def rotate(self, degrees):
-        radians = math.radians(degrees)
-        self.current_matrix.rotate(radians, 0, 0, 1)
+        pass
 
     def scale(self, sx, sy):
-        self.current_matrix.scale(sx, sy, 1)
+        pass
 
     def translate(self, dx, dy):
-        self.current_matrix.translate(dx, dy, 0)
+        pass
 
     def resetTransform(self):
-        """重置变换矩阵"""
-        self.current_matrix = Matrix()
-        self._current_origin = (0, 0)
+        pass
 
     @property
     def global_alpha(self) -> float:
@@ -969,6 +935,7 @@ class Canvas2DContext(Widget):
 
         with self.canvas:
             PushMatrix()
+            Color(1, 1, 1, 1)
             Rectangle(
                 texture=source_region,
                 pos=(dx, dy),  # 使用Canvas坐标系中的dy
@@ -986,9 +953,7 @@ class Canvas2DContext(Widget):
             'font': self._font,
             'text_align': self._text_align,
             'text_baseline': self._text_baseline,
-            'current_matrix': copy.deepcopy(self.current_matrix),
             'clip_path': copy.deepcopy(self.clip_path),
-            '_current_origin': self._current_origin,
         }
         self._state_stack.append(state)
 
@@ -1003,9 +968,7 @@ class Canvas2DContext(Widget):
         self.font = state['font']  # 触发font setter以更新相关属性
         self._text_align = state['text_align']
         self._text_baseline = state['text_baseline']
-        self.current_matrix = state['current_matrix']
         self.clip_path = state['clip_path']
-        self._current_origin = state['_current_origin']
 
     #---------- 滤镜 ----------
     @property
