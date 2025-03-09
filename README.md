@@ -29,10 +29,10 @@ TODO:
 - [x] moveTo()
 - [x] lineTo()
 - [x] rect()
-- [x] roundRect()
-- [x] fill()
-- [x] stroke()
-- [x] clip() （待测试）
+- [ ] roundRect() ?
+- [x] fill() ?
+- [x] stroke() ?
+- [ ] clip() ?
 
 ### 变换
 - [x] rotate()

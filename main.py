@@ -613,6 +613,7 @@ class Canvas2DContext(Widget):
         self.current_path = []
         self.clip_path = None
         self._state_stack = []
+        self._filter = None
     
     #---------- 基础绘图 API ----------
     def clear_rect(self, x, y, width, height):
@@ -1076,13 +1077,37 @@ if __name__ == '__main__':
             return ctx
             """
 
-            ctx.fill_style = 'red'
             ctx.begin_path()
-            ctx.move_to(20,10)
-            ctx.line_to(120,-120)
-            ctx.line_to(220,10)
-            ctx.close_path()
+            ctx.rect(50, 300, 100, 100)  # x,y,width,height
+            ctx.fill_style = 'orange'
+            ctx.fill()
+
+            # 测试 rect + stroke
+            ctx.begin_path()
+            ctx.rect(200, 300, 100, 100)
+            ctx.stroke_style = 'blue'
+            ctx.line_width = 5
             ctx.stroke()
+
+            # 测试 roundRect + fill+stroke
+            ctx.begin_path()
+            ctx.round_rect(350, 300, 120, 120, 20)  # 圆角半径20
+            ctx.fill_style = 'yellow'
+            ctx.fill()
+            ctx.stroke_style = 'purple'
+            ctx.stroke()
+
+            # 测试 clip 裁剪功能
+            ctx.save()  # 保存当前状态
+            ctx.begin_path()
+            ctx.rect(500, 200, 150, 150)  # 创建裁剪区域
+            ctx.clip()
+
+            # 裁剪区域内绘制超出的图形
+            #ctx.rect(450, 150, 250, 250)  # 部分会被裁剪
+            #ctx.fill_style = 'rgba(0,255,0,0.7)'
+            ctx.fill()
+            ctx.restore()  # 恢复状态
             return ctx
     
     ctxApp().run()
