@@ -14,6 +14,7 @@ from kivy.graphics import (
 )
 
 import re
+import copy
 
 class CSSColorParser:
     COLORS = {
@@ -387,59 +388,6 @@ class CSSFont:
         weight = weight_map.get(weight, weight)
         if weight.isdigit() and int(weight) >= 600:
             widget.bold = True
-
-class CSSTextInput(TextInput):
-    """支持CSS font属性的增强版TextInput"""
-    def __init__(self, font_str=None, **kwargs):
-        super().__init__(**kwargs)
-        self.original_font_name = self.font_name
-        self.original_font_size = self.font_size
-        self.css_font = None
-        
-        if font_str:
-            self.set_font(font_str)
-
-    def set_font(self, font_str):
-        """设置CSS字体属性"""
-        self.css_font = CSSFont(font_str)
-        self.css_font.apply_to_text(self)
-        
-        # 强制刷新字体缓存
-        self._trigger_refresh_text()
-
-    def _trigger_refresh_text(self):
-        """覆盖原生方法以确保字体立即更新"""
-        if self._label is not None:
-            self._label = None
-        self._refresh_text()
-
-    def _get_label(self):
-        """覆盖原生方法以应用自定义字体属性"""
-        if self._label is None:
-            self._label = MarkupLabel()
-            self._label.text = self._get_text_for_label()
-            self._label.options = {'text': self._label.text}
-            self._label.refresh()
-            
-            # 应用CSS属性到内部Label
-            if self.css_font:
-                self._label.font_size = self.css_font.font_size
-                self._label.font_name = self.css_font._get_kivy_font_name()
-                self._apply_label_style(self._label)
-                
-        return self._label
-
-    def _apply_label_style(self, label):
-        """应用样式到内部Label"""
-        # 斜体
-        if 'italic' in self.css_font.font_style.lower():
-            label.italic = True
-        
-        # 粗体
-        if self.css_font.font_weight.isdigit():
-            label.bold = int(self.css_font.font_weight) >= 600
-        else:
-            label.bold = 'bold' in self.css_font.font_weight.lower()
 
 class TextMetrics:
     def __init__(self, label, context):
