@@ -1056,5 +1056,10 @@ if __name__ == '__main__':
             ctx.fill_rect(0, 0, 80, 80)
             return ctx
             """
+
+            ctx.stroke_style = 'red'
+            ctx.line_width = 1
+            ctx.stroke_rect(10, 10, 100, 100)
+            return ctx
     
     ctxApp().run()
