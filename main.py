@@ -961,6 +961,14 @@ class Canvas2DContext(Widget):
             'text_align': self._text_align,
             'text_baseline': self._text_baseline,
             'clip_path': copy.deepcopy(self.clip_path),
+            'scale_x': self._scale_x,
+            'scale_y': self._scale_y,
+            'rotation': self._rotation,
+            'translate_x': self._translate_x,
+            'translate_y': self._translate_y,
+            'current_path': copy.deepcopy(self.current_path),
+            'filter': self._filter,
+            'global_alpha': self.global_alpha,
         }
         self._state_stack.append(state)
 
@@ -976,6 +984,14 @@ class Canvas2DContext(Widget):
         self._text_align = state['text_align']
         self._text_baseline = state['text_baseline']
         self.clip_path = state['clip_path']
+        self._scale_x = state['scale_x']
+        self._scale_y = state['scale_y']
+        self._rotation = state['rotation']
+        self._translate_x = state['translate_x']
+        self._translate_y = state['translate_y']
+        self.current_path = copy.deepcopy(state['current_path'])
+        self._filter = state['filter']
+        self.global_alpha = state['global_alpha']
 
     #---------- 滤镜 ----------
     @property
@@ -1030,6 +1046,8 @@ if __name__ == '__main__':
 
             """
 
+            """
+            #矩阵测试
             ctx.translate(110, 30)
             ctx.fill_style = "red"
             ctx.fill_rect(0, 0, 80, 80)
@@ -1037,5 +1055,6 @@ if __name__ == '__main__':
             ctx.fill_style = "blue"
             ctx.fill_rect(0, 0, 80, 80)
             return ctx
+            """
     
     ctxApp().run()
