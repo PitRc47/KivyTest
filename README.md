@@ -17,17 +17,17 @@ TODO:
 ### 属性
 
 - [x] lineWidth
-- [ ] font （差模拟API）
+- [ ] font （差一点点封装）
 - [ ] textAlign
 - [ ] textBaseline
-- [x] fillStyle → 支持 CSS 颜色解析（CSSColorParser）
-- [x] strokeStyle → 支持 CSS 颜色解析
+- [x] fillStyle
+- [x] strokeStyle
 
 ### 路径操作
 - [x] beginPath()
-- [x] closePath() （待测试）
-- [x] moveTo() （待测试）
-- [x] lineTo() （待测试）
+- [ ] closePath()
+- [x] moveTo()
+- [x] lineTo()
 - [x] rect()
 - [x] roundRect()
 - [x] fill()

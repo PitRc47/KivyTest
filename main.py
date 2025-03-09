@@ -1056,10 +1056,31 @@ if __name__ == '__main__':
             ctx.fill_rect(0, 0, 80, 80)
             return ctx
             """
+            """
+            测试text_align
+            ctx.fill_style = 'red'
+            ctx.text_align = 'center'
+            x = 400 // 2
+            ctx.begin_path()
+            ctx.move_to(x, 0)
+            ctx.line_to(x, 400)
+            ctx.stroke()
+            ctx.text_align = "left"
+            ctx.fill_text("left-aligned", x, 40)
+            ctx.text_align = "center"
+            ctx.fill_text("center-aligned", x, 85)
+            ctx.text_align = "right"
+            ctx.fill_text("right-aligned", x, 130)
+            return ctx
+            """
 
-            ctx.stroke_style = 'red'
-            ctx.line_width = 1
-            ctx.stroke_rect(10, 10, 100, 100)
+            ctx.fill_style = 'red'
+            ctx.begin_path()
+            ctx.move_to(20,10)
+            ctx.line_to(120,-120)
+            ctx.line_to(220,10)
+            ctx.close_path()
+            ctx.stroke()
             return ctx
     
     ctxApp().run()
