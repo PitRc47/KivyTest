@@ -30,8 +30,8 @@ TODO:
 - [x] lineTo()
 - [x] rect()
 - [ ] roundRect() ?
-- [x] fill() ?
-- [x] stroke() ?
+- [x] fill()
+- [ ] stroke() ?
 - [ ] clip() ?
 
 ### 变换
