@@ -775,12 +775,14 @@ class Canvas2DContext(Widget):
 
     def close_path(self) -> None:
         """闭合路径"""
-        if self.current_path:
-            self.current_path.append(self.current_path[0])
+        if self.current_path and self.current_path[-1]:  # 检查是否存在子路径及点
+            current_subpath = self.current_path[-1]
+            if len(current_subpath) >= 1:  # 确保有起点
+                # 将首点添加到末尾闭合路径
+                current_subpath.append(current_subpath[0])
 
     def move_to(self, x: float, y: float) -> None:
-        """移动路径起点"""
-        self.current_path.append([(x, y)])
+        self.current_path.append([(x, y)])  # 新子路径以当前点开始
 
     def line_to(self, x, y):
         """添加直线路径"""

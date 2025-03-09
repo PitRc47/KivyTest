@@ -25,7 +25,7 @@ TODO:
 
 ### 路径操作
 - [x] beginPath()
-- [ ] closePath()
+- [x] closePath()
 - [x] moveTo()
 - [x] lineTo()
 - [x] rect()
