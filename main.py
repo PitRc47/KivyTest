@@ -1022,7 +1022,7 @@ if __name__ == '__main__':
     from kivy.core.text import LabelBase
     LabelBase.register(
         name='MicrosoftYaHei',  # 字体族名称
-        fn_regular='C:/Users/Admin/Documents/PhigrosPlayer/src/resources/font.ttf'  # 系统字体文件路径
+        fn_regular='font.ttf'  # 系统字体文件路径
     )
     class ctxApp(App):
         def build(self, **kwargs):
@@ -1054,7 +1054,9 @@ if __name__ == '__main__':
             ctx.rect(40, 40, 70, 70)
             ctx.stroke()
 
-            ctx.draw_image("C:/Users/Admin/Documents/PhigrosPlayer/src/resources/icon.ico", 0, 700)
+            ctx.draw_image("icon.ico", 0, 700)
+
+
             return ctx
     
     ctxApp().run()
