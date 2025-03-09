@@ -1053,6 +1053,8 @@ if __name__ == '__main__':
             ctx.line_to(130, 130)
             ctx.rect(40, 40, 70, 70)
             ctx.stroke()
+
+            ctx.draw_image("C:/Users/Admin/Documents/PhigrosPlayer/src/resources/icon.ico", 0, 700)
             return ctx
     
     ctxApp().run()
