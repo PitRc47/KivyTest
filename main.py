@@ -395,80 +395,53 @@ class CSSFont:
 class TextMetrics:
     def __init__(self, label, context):
         self._label = label
-        self._ctx = context  # Canvas2DContext实例
+        self._ctx = context
         self._texture = label.texture if label else None
+        self._extents = label.get_extents(label.text) if label.text else None  # (width, height)
 
     @property
     def width(self) -> float:
-        """实际文本宽度（像素）"""
-        return self._texture.width if self._texture else 0
+        return self._extents[0] if self._extents else 0
 
     @property
-    def actualBoundingBoxLeft(self) -> float:
-        """基于对齐点的左侧溢出距离"""
-        align = self._ctx.textAlign
-        base_x = self._get_alignment_base_x()
-        return abs(base_x - 0)  # 实际渲染的左侧坐标
+    def ascent(self):
+        return self.font_height * 0.8
 
     @property
-    def actualBoundingBoxRight(self) -> float:
-        """基于对齐点的右侧溢出距离"""
-        align = self._ctx.textAlign
-        base_x = self._get_alignment_base_x()
-        return abs(self.width - base_x)
+    def descent(self):
+        return self.font_height * 0.2
+
+    @property
+    def font_height(self):
+        return self._extents[1] if self._extents else 0
 
     @property
     def actualBoundingBoxAscent(self) -> float:
-        """实际内容上沿高度"""
-        return self._ctx.font_size * 0.8  # 估算为字号的80%
+        return self.ascent
 
     @property
     def actualBoundingBoxDescent(self) -> float:
-        """实际内容下沿高度"""
-        return self._ctx.font_size * 0.2  # 估算为字号的20%
-
-    @property
-    def fontBoundingBoxAscent(self) -> float:
-        """字体理论上沿高度"""
-        return self._ctx.font_size  # 保守估算为全字号
-
-    @property
-    def fontBoundingBoxDescent(self) -> float:
-        """字体理论下沿高度"""
-        return self._ctx.font_size * 0.25  # 典型西文字体比例
-
-    @property
-    def emHeightAscent(self) -> float:
-        """EM方块上沿（通常等于字号）"""
-        return self._ctx.font_size
-
-    @property
-    def emHeightDescent(self) -> float:
-        """EM方块下沿（通常为0）"""
-        return 0  # 根据CSS规范EM框定义
-
-    @property
-    def hangingBaseline(self) -> float:
-        """悬挂基线偏移量"""
-        return self._ctx.font_size * 0.8  # 近似印度语基线
+        return self.descent
 
     @property
     def alphabeticBaseline(self) -> float:
-        """字母基线偏移量"""
-        return 0  # 基准线对齐点
+        return self.ascent
 
     @property
     def ideographicBaseline(self) -> float:
-        """表意文字基线偏移量"""
-        return -self._ctx.font_size * 0.1  # 近似中文基线位置
+        return self.font_height * 0.75
+    
+    @property
+    def hangingBaseline(self):
+        return self.ascent * 0.25
 
     def _get_alignment_base_x(self):
-        """获取当前对齐方式下的基准X坐标"""
-        if self._ctx.textAlign == 'left':
+        align = self._ctx.textAlign
+        if align == 'left':
             return 0
-        elif self._ctx.textAlign == 'center':
+        elif align == 'center':
             return self.width / 2
-        elif self._ctx.textAlign == 'right':
+        elif align == 'right':
             return self.width
         return 0
 
@@ -571,8 +544,10 @@ class Canvas2DContext(Widget):
     
     @fillStyle.setter
     def fillStyle(self, color_str):
-        #设置填充颜色 支持CSS颜色格式
-        self._fill_style = CSSColorParser.parse_color(color_str)
+        if isinstance(color_str, tuple):
+            self._fill_style = color_str
+        else:
+            self._fill_style = CSSColorParser.parse_color(color_str)
 
     @property
     def strokeStyle(self):
@@ -580,8 +555,10 @@ class Canvas2DContext(Widget):
     
     @strokeStyle.setter
     def strokeStyle(self, color_str):
-        #设置描边颜色 支持CSS颜色格式
-        self._stroke_style = CSSColorParser.parse_color(color_str)
+        if isinstance(color_str, tuple):
+            self._stroke_style = color_str
+        else:
+            self._stroke_style = CSSColorParser.parse_color(color_str)
 
     @property
     def filter(self) -> str:
@@ -826,20 +803,26 @@ class Canvas2DContext(Widget):
         elif self.textAlign == 'right':
             x -= text_width * scale_factor
 
-        ascent = self.font_size * 0.8
-        descent = self.font_size * 0.2
-        total_height = ascent + descent
+        metrics = self.measureText(text)
+        font_height = metrics.font_height
 
+        # 坐标转换逻辑修正
         match self.textBaseline:
             case 'top':
-                y_adjust = 0
+                y_adjust = -metrics.ascent  # 文本顶部对齐
+            case 'hanging':
+                y_adjust = -metrics.hangingBaseline
             case 'middle':
-                y_adjust = -total_height / 2
+                y_adjust = -font_height / 2  # 垂直居中
+            case 'alphabetic':
+                y_adjust = -metrics.alphabeticBaseline
+            case 'ideographic':
+                y_adjust = -metrics.ideographicBaseline
             case 'bottom':
-                y_adjust = -total_height
+                y_adjust = -font_height  # 文本底部对齐
             case _:
-                y_adjust = -ascent
-
+                y_adjust = -metrics.alphabeticBaseline  # 默认字母基线
+            
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
@@ -959,6 +942,8 @@ class Canvas2DContext(Widget):
 
     def rect(self, x, y, w, h):
         """添加矩形路径"""
+        y = -y
+        h = -h
         self._current_shape = ('rect', (x, y, w, h))
         self.current_path.append([
             (x, y), (x + w, y), (x + w, y + h), (x, y + h), (x, y)
@@ -1180,7 +1165,10 @@ if __name__ == '__main__':
             with ctx:
                 ctx.reset()
 
+                ctx.font = '20px Phigros'
+
                 
+
             time.sleep(1 / 60)
 
     Thread(target = draw, daemon = True).start()
