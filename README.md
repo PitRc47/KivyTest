@@ -29,7 +29,7 @@ TODO:
 - [x] moveTo()
 - [x] lineTo()
 - [x] rect()
-- [ ] roundRect() ?
+- [x] roundRect()
 - [x] fill()
 - [x] stroke()
 - [ ] clip() ?
