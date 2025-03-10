@@ -1,6 +1,6 @@
 # Kivy Canvas2D API 实现
 TODO: 
-   1. Y轴坐标翻转
+   ~~ 1. Y轴坐标翻转 ~~
    2. 渐变/阴影
    3. 画布属性
    4. 透明度
@@ -12,13 +12,13 @@ TODO:
 - [x] strokeRect() 
 - [x] fillText() 
 - [x] strokeText()
-- [x] measureText()  （未测试，可能不准确）
+- [x] measureText()  （不准确）
 
 ### 属性
 
 - [x] lineWidth
-- [ ] font （差一点点封装）
-- [ ] textAlign
+- [x] font
+- [x] textAlign
 - [ ] textBaseline
 - [x] fillStyle
 - [x] strokeStyle

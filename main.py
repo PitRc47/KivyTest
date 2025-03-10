@@ -815,7 +815,16 @@ class Canvas2DContext(Widget):
         texture = self._flip(label.texture)
 
         text_width, text_height = texture.width, texture.height
-        scale_factor = min(max_width / text_width, 1) if max_width else 1.0
+        
+        scale_factor = 1.0
+        if max_width and text_width > max_width:
+            scale_factor = max_width / text_width
+            text_height *= scale_factor
+
+        if self.textAlign == 'center':
+            x -= text_width * scale_factor / 2
+        elif self.textAlign == 'right':
+            x -= text_width * scale_factor
 
         ascent = self.font_size * 0.8
         descent = self.font_size * 0.2
@@ -854,31 +863,23 @@ class Canvas2DContext(Widget):
             valign='top'
         )
         label.refresh()
-        
-        if not label.texture:
-            return
 
-        # 获取文本尺寸和纹理
         texture = label.texture
         text_width = texture.width
         text_height = texture.height
 
-        # 处理最大宽度限制
         scale_factor = 1.0
         if max_width and text_width > max_width:
             scale_factor = max_width / text_width
-            text_width = max_width
             text_height *= scale_factor
-
-        # 计算水平位置
+        
         if self.textAlign == 'center':
             x -= text_width * scale_factor / 2
         elif self.textAlign == 'right':
             x -= text_width * scale_factor
 
-        # 计算垂直位置（基于估算的字体度量）
-        ascent = self.font_size * 0.8  # 假设ascender占80%
-        descent = self.font_size * 0.2  # 假设descender占20%
+        ascent = self.font_size * 0.8
+        descent = self.font_size * 0.2
         total_height = ascent + descent
 
         match self.textBaseline:
@@ -1179,17 +1180,7 @@ if __name__ == '__main__':
             with ctx:
                 ctx.reset()
 
-                ctx.beginPath()
-                ctx.strokeStyle = 'blue'
-                ctx.moveTo(20, 20)
-                ctx.lineTo(200, 20)
-                ctx.stroke()
-
-                ctx.beginPath()
-                ctx.strokeStyle = 'red'
-                ctx.moveTo(20, 20)
-                ctx.lineTo(120, 120)
-                ctx.stroke()
+                
             time.sleep(1 / 60)
 
     Thread(target = draw, daemon = True).start()
