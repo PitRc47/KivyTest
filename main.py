@@ -405,14 +405,14 @@ class TextMetrics:
     @property
     def actualBoundingBoxLeft(self) -> float:
         """基于对齐点的左侧溢出距离"""
-        align = self._ctx.text_align
+        align = self._ctx.textAlign
         base_x = self._get_alignment_base_x()
         return abs(base_x - 0)  # 实际渲染的左侧坐标
 
     @property
     def actualBoundingBoxRight(self) -> float:
         """基于对齐点的右侧溢出距离"""
-        align = self._ctx.text_align
+        align = self._ctx.textAlign
         base_x = self._get_alignment_base_x()
         return abs(self.width - base_x)
 
@@ -463,11 +463,11 @@ class TextMetrics:
 
     def _get_alignment_base_x(self):
         """获取当前对齐方式下的基准X坐标"""
-        if self._ctx.text_align == 'left':
+        if self._ctx.textAlign == 'left':
             return 0
-        elif self._ctx.text_align == 'center':
+        elif self._ctx.textAlign == 'center':
             return self.width / 2
-        elif self._ctx.text_align == 'right':
+        elif self._ctx.textAlign == 'right':
             return self.width
         return 0
 
@@ -496,28 +496,27 @@ class Canvas2DContext(Widget):
     #---------- 样式属性 ----------
     
     @property
-    def line_width(self) -> float:
-        """线条宽度"""
+    def lineWidth(self) -> float:
         return self._line_width
 
-    @line_width.setter
-    def line_width(self, value: float) -> None:
+    @lineWidth.setter
+    def lineWidth(self, value: float) -> None:
         self._line_width = value
 
     @property
-    def text_align(self) -> str:
+    def textAlign(self) -> str:
         return self._text_align
 
-    @text_align.setter
-    def text_align(self, value: str) -> None:
+    @textAlign.setter
+    def textAlign(self, value: str) -> None:
         self._text_align = value
 
     @property
-    def text_baseline(self) -> str:
+    def textBaseline(self) -> str:
         return self._text_baseline
 
-    @text_baseline.setter
-    def text_baseline(self, value: str) -> None:
+    @textBaseline.setter
+    def textBaseline(self, value: str) -> None:
         self._text_baseline = value
 
     @property
@@ -526,28 +525,26 @@ class Canvas2DContext(Widget):
     
     @font.setter
     def font(self, value):
-        #设置字体并解析CSS字体属性
         self._font = value
         css_font = CSSFont(value)
         self.font_size = css_font.font_size
         self.font_name = css_font._get_kivy_font_name()
-        # 处理斜体（Kivy的CoreLabel自动识别字体名称中的Italic）
 
     @property
-    def fill_style(self):
+    def fillStyle(self):
         return self._fill_style
     
-    @fill_style.setter
-    def fill_style(self, color_str):
+    @fillStyle.setter
+    def fillStyle(self, color_str):
         #设置填充颜色 支持CSS颜色格式
         self._fill_style = CSSColorParser.parse_color(color_str)
 
     @property
-    def stroke_style(self):
+    def strokeStyle(self):
         return self._stroke_style
     
-    @stroke_style.setter
-    def stroke_style(self, color_str):
+    @strokeStyle.setter
+    def strokeStyle(self, color_str):
         #设置描边颜色 支持CSS颜色格式
         self._stroke_style = CSSColorParser.parse_color(color_str)
 
@@ -600,6 +597,20 @@ class Canvas2DContext(Widget):
         if hasattr(image, "texture"):
             return image.texture
         raise TypeError("Unsupported image type")
+    
+    def _rotatectx(self):
+        Rotate(angle=self._rotation, origin=self.center)
+
+    def _scalectx(self):
+        Scale(x=self._scale_x, y=self._scale_y)
+
+    def _translatectx(self):
+        Translate(x=self._translate_x, y=self._translate_y)
+
+    def _applyMatrix(self):
+        self._rotatectx()
+        self._scalectx()
+        self._translatectx()
 
     def reset(self):
         self._fill_style = (0, 0, 0, 1)
@@ -616,34 +627,33 @@ class Canvas2DContext(Widget):
         self._filter = None
     
     #---------- 基础绘图 API ----------
-    def clear_rect(self, x, y, width, height):
+    def clearRect(self, x, y, width, height):
         """清除指定矩形区域的像素 模拟clearRect"""
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
-            Color(1, 1, 1, 1)  # 白色
+            Color(1, 1, 1, 1)
             Rectangle(pos=(x, y), size=(width, height))
             PopMatrix()
 
-    def fill_rect(self, x, y, width, height):
+    def fillRect(self, x, y, width, height):
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
-            Color(*self.fill_style)
+            Color(*self.fillStyle)
             Rectangle(pos=(x, y), size=(width, height))
             PopMatrix()
-            self.canvas.ask_update()
 
-    def stroke_rect(self, x, y, width, height):
+    def strokeRect(self, x, y, width, height):
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
-            Color(*self.stroke_style)
-            Line(width=self.line_width, rectangle=(x, y, width, height), close=True)
+            Color(*self.strokeStyle)
+            Line(width=self.lineWidth, rectangle=(x, y, width, height), close=True)
             PopMatrix()
 
     #---------- 文本 API ----------
-    def fill_text(self, text: str, x: float, y: float, max_width: float = None) -> None:
+    def fillText(self, text: str, x: float, y: float, max_width: float = None) -> None:
         label = CoreLabel(text=text, font_size=self.font_size, font_name=self.font_name.split(',')[0], valign='top')
         label.refresh()
         if not label.texture: return
@@ -656,14 +666,13 @@ class Canvas2DContext(Widget):
         descent = self.font_size * 0.2
         total_height = ascent + descent
 
-        # Adjust y based on text baseline
-        if self.text_baseline == 'top':
+        if self.textBaseline == 'top':
             y_adjust = 0
-        elif self.text_baseline == 'middle':
+        elif self.textBaseline == 'middle':
             y_adjust = -total_height / 2
-        elif self.text_baseline == 'bottom':
+        elif self.textBaseline == 'bottom':
             y_adjust = -total_height
-        else:  # 'alphabetic' and others
+        else:
             y_adjust = -ascent
 
         pos_y = y + y_adjust
@@ -672,7 +681,7 @@ class Canvas2DContext(Widget):
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
-            Color(*self.fill_style)
+            Color(*self.fillStyle)
             Rectangle(
                 pos=(pos_x, pos_y),
                 size=(text_width * scale_factor, text_height * scale_factor),
@@ -681,7 +690,7 @@ class Canvas2DContext(Widget):
             PopMatrix()
 
 
-    def stroke_text(self, text: str, x: float, y: float, max_width: float = None) -> None:
+    def strokeText(self, text: str, x: float, y: float, max_width: float = None) -> None:
         """实现描边文本功能"""
         # 创建核心标签对象
         label = CoreLabel(
@@ -708,9 +717,9 @@ class Canvas2DContext(Widget):
             text_height *= scale_factor
 
         # 计算水平位置
-        if self.text_align == 'center':
+        if self.textAlign == 'center':
             x -= text_width * scale_factor / 2
-        elif self.text_align == 'right':
+        elif self.textAlign == 'right':
             x -= text_width * scale_factor
 
         # 计算垂直位置（基于估算的字体度量）
@@ -718,13 +727,13 @@ class Canvas2DContext(Widget):
         descent = self.font_size * 0.2  # 假设descender占20%
         total_height = ascent + descent
 
-        if self.text_baseline == 'top':
+        if self.textBaseline == 'top':
             y_adjust = 0
-        elif self.text_baseline == 'middle':
+        elif self.textBaseline == 'middle':
             y_adjust = -total_height / 2
-        elif self.text_baseline == 'bottom':
+        elif self.textBaseline == 'bottom':
             y_adjust = -total_height
-        elif self.text_baseline == 'alphabetic':
+        elif self.textBaseline == 'alphabetic':
             y_adjust = -ascent
         else:
             y_adjust = -ascent
@@ -734,7 +743,7 @@ class Canvas2DContext(Widget):
         size = (text_width * scale_factor, text_height * scale_factor)
 
         # 生成描边偏移量（圆形分布）
-        radius = int(self.line_width)
+        radius = int(self.lineWidth)
         offsets = []
         for dx in range(-radius, radius+1):
             for dy in range(-radius, radius+1):
@@ -745,7 +754,7 @@ class Canvas2DContext(Widget):
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
-            Color(*self.stroke_style)
+            Color(*self.strokeStyle)
             for dx, dy in offsets:
                 # 应用缩放因子到偏移量
                 scaled_dx = dx * scale_factor
@@ -757,7 +766,7 @@ class Canvas2DContext(Widget):
                 )
             PopMatrix()
 
-    def measure_text(self, text: str) -> dict:
+    def measureText(self, text: str) -> dict:
         """完整字体度量实现"""
         label = CoreLabel(
             text=text,
@@ -769,12 +778,12 @@ class Canvas2DContext(Widget):
         return TextMetrics(label, self)
 
     #---------- 路径 API ----------
-    def begin_path(self) -> None:
+    def beginPath(self) -> None:
         """开始新路径"""
         self.current_path = []
         self._current_shape = None
 
-    def close_path(self) -> None:
+    def closePath(self) -> None:
         """闭合路径"""
         if self.current_path and self.current_path[-1]:  # 检查是否存在子路径及点
             current_subpath = self.current_path[-1]
@@ -782,13 +791,13 @@ class Canvas2DContext(Widget):
                 # 将首点添加到末尾闭合路径
                 current_subpath.append(current_subpath[0])
 
-    def move_to(self, x: float, y: float) -> None:
+    def moveTo(self, x: float, y: float) -> None:
         self.current_path.append([(x, y)])  # 新子路径以当前点开始
 
-    def line_to(self, x, y):
+    def lineTo(self, x, y):
         """添加直线路径"""
         if not self.current_path:
-            self.move_to(x, y)  # 无子路径时自动创建
+            self.moveTo(x, y)  # 无子路径时自动创建
         else:
             self.current_path[-1].append((x, y))
 
@@ -799,7 +808,7 @@ class Canvas2DContext(Widget):
             (x, y), (x + w, y), (x + w, y + h), (x, y + h), (x, y)
         ])
 
-    def round_rect(self, x, y, w, h, r):
+    def roundRect(self, x, y, w, h, r):
         """添加圆角矩形路径"""
         self._current_shape = ('round_rect', (x, y, w, h, r))
 
@@ -810,7 +819,7 @@ class Canvas2DContext(Widget):
             self._applyMatrix()
             self._apply_clip()
             
-            Color(*self.fill_style)
+            Color(*self.fillStyle)
             for subpath in self.current_path:
                 if len(subpath) >= 3:
                     points = [coord for p in subpath for coord in p]
@@ -829,12 +838,12 @@ class Canvas2DContext(Widget):
             self._applyMatrix()  # 应用所有变换（旋转/缩放/平移）
             self._apply_clip()
             
-            Color(*self.stroke_style)
+            Color(*self.strokeStyle)
             for subpath in self.current_path:
                 if len(subpath) >= 2:
                     # 直接使用原始坐标，由变换矩阵处理
                     points = [coord for p in subpath for coord in p]
-                    Line(points=points, width=self.line_width)
+                    Line(points=points, width=self.lineWidth)
             
             PopState()
 
@@ -846,28 +855,14 @@ class Canvas2DContext(Widget):
             self.clip_path = None
 
     #---------- 变换 API ----------
-    def _rotatectx(self):
-        Rotate(angle=self._rotation, origin=self.center)
-
     def rotate(self, angle):
         """旋转操作"""
         self._rotation += angle
-
-    def _scalectx(self):
-        Scale(x=self._scale_x, y=self._scale_y)
 
     def scale(self, sx, sy):
         """缩放操作"""
         self._scale_x *= sx
         self._scale_y *= sy
-
-    def _translatectx(self):
-        Translate(x=self._translate_x, y=self._translate_y)
-
-    def _applyMatrix(self):
-        self._rotatectx()
-        self._scalectx()
-        self._translatectx()
 
     def translate(self, tx, ty):
         """平移操作"""
@@ -896,21 +891,21 @@ class Canvas2DContext(Widget):
         self._translate_y = 0
 
     @property
-    def global_alpha(self) -> float:
+    def globalAlpha(self) -> float:
         """全局透明度"""
         return 1.0
 
-    @global_alpha.setter
-    def global_alpha(self, value: float) -> None:
+    @globalAlpha.setter
+    def globalAlpha(self, value: float) -> None:
         pass
 
     #---------- 图像 API ----------
-    def draw_image(self, image, *args):
+    def drawImage(self, image, *args):
         """
         支持三种重载形式：
-        1. draw_image(image, dx, dy)
-        2. draw_image(image, dx, dy, dWidth, dHeight)
-        3. draw_image(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+        1. drawImage(image, dx, dy)
+        2. drawImage(image, dx, dy, dWidth, dHeight)
+        3. drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
         """
         # 参数解析
         n_args = len(args)
@@ -1010,104 +1005,13 @@ if __name__ == '__main__':
     ctx = Canvas2DContext()
     from kivy.core.text import LabelBase
     LabelBase.register(
-        name='MicrosoftYaHei',  # 字体族名称
+        name='Phigros',  # 字体族名称
         fn_regular='font.ttf'  # 系统字体文件路径
     )
     class ctxApp(App):
         def build(self, **kwargs):
-            ctx.font = '50px MicrosoftYaHei'
-
-            """
-            ctx.fill_style = 'red'
-            ctx.fill_rect(10, 100, 30, 40)
-            ctx.fill_style = '#000000'
-            ctx.fill_text('Kivy Renderer PhigrosPlayer模拟器 ;-)', 20 , 300)
-            ctx.stroke_style = 'blue'
-            ctx.stroke_text('这是一个stroke_text', 20, 600)
-            ctx.fill_style = 'orange'
-            ctx.font = '20px MicrosoftYaHei'
-            ctx.fill_text(f'"这是一个measure_text"的width是：{ctx.measure_text('这是一个measure_text').width}',400, 22)
-            
-            ctx.begin_path()
-            ctx.move_to(20, 20)
-            ctx.line_to(180, 20)
-            ctx.line_to(130, 130)
-            ctx.close_path()
-            ctx.fill()
-
-            ctx.clear_rect(10, 10, 120, 100)
-
-            ctx.lineWidth = 200
-
-            ctx.begin_path()
-            ctx.move_to(20, 20)
-            ctx.line_to(130, 130)
-            ctx.rect(40, 40, 70, 70)
-            ctx.stroke()
-
-            ctx.draw_image("icon.ico", 0, 700)
-
-            """
-
-            """
-            #矩阵测试
-            ctx.translate(110, 30)
-            ctx.fill_style = "red"
-            ctx.fill_rect(0, 0, 80, 80)
-            ctx.setTransform(1, 0, 0, 1, 0, 0)
-            ctx.fill_style = "blue"
-            ctx.fill_rect(0, 0, 80, 80)
-            return ctx
-            """
-            """
-            测试text_align
-            ctx.fill_style = 'red'
-            ctx.text_align = 'center'
-            x = 400 // 2
-            ctx.begin_path()
-            ctx.move_to(x, 0)
-            ctx.line_to(x, 400)
-            ctx.stroke()
-            ctx.text_align = "left"
-            ctx.fill_text("left-aligned", x, 40)
-            ctx.text_align = "center"
-            ctx.fill_text("center-aligned", x, 85)
-            ctx.text_align = "right"
-            ctx.fill_text("right-aligned", x, 130)
-            return ctx
-            """
-
-            ctx.begin_path()
-            ctx.rect(50, 300, 100, 100)  # x,y,width,height
-            ctx.fill_style = 'orange'
-            ctx.fill()
-
-            # 测试 rect + stroke
-            ctx.begin_path()
-            ctx.rect(200, 300, 100, 100)
-            ctx.stroke_style = 'blue'
-            ctx.line_width = 5
-            ctx.stroke()
-
-            # 测试 roundRect + fill+stroke
-            ctx.begin_path()
-            ctx.round_rect(350, 300, 120, 120, 20)  # 圆角半径20
-            ctx.fill_style = 'yellow'
-            ctx.fill()
-            ctx.stroke_style = 'purple'
-            ctx.stroke()
-
-            # 测试 clip 裁剪功能
-            ctx.save()  # 保存当前状态
-            ctx.begin_path()
-            ctx.rect(500, 200, 150, 150)  # 创建裁剪区域
-            ctx.clip()
-
-            # 裁剪区域内绘制超出的图形
-            #ctx.rect(450, 150, 250, 250)  # 部分会被裁剪
-            #ctx.fill_style = 'rgba(0,255,0,0.7)'
-            ctx.fill()
-            ctx.restore()  # 恢复状态
+            ctx.font = '50px Phigros'
+            ctx.fillText('Hello World', 100, 100)
             return ctx
     
     ctxApp().run()
