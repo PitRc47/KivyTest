@@ -1077,25 +1077,23 @@ class Canvas2DContext(Widget):
         2. drawImage(image, dx, dy, dWidth, dHeight)
         3. drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
         """
-        # 参数解析
-        n_args = len(args)
-        if n_args == 2:
-            dx, dy = args
-            source_rect = None
-            dw, dh = None, None
-        elif n_args == 4:
-            dx, dy, dw, dh = args
-            source_rect = None
-        elif n_args == 8:
-            sx, sy, sw, sh, dx, dy, dw, dh = args
-            source_rect = (sx, sy, sw, sh)
-        else:
-            raise ValueError("Invalid arguments. Expected 2, 4 or 8 parameters")
 
-        # 加载纹理
+        match len(args):
+            case 2:
+                dx, dy = args
+                source_rect = None
+                dw, dh = None, None
+            case 4:
+                dx, dy, dw, dh = args
+                source_rect = None
+            case 8:
+                sx, sy, sw, sh, dx, dy, dw, dh = args
+                source_rect = (sx, sy, sw, sh)
+            case _:
+                raise ValueError("Invalid arguments. Expected 2, 4 or 8 parameters")
+        
         texture = self.loadTexture(image)
         
-        # 处理源矩形
         if source_rect:
             sx, sy, sw, sh = source_rect
             # 转换坐标系（浏览器左上角原点到Kivy左下角原点）
@@ -1104,7 +1102,7 @@ class Canvas2DContext(Widget):
         else:
             sw, sh = texture.width, texture.height
             source_region = texture
-            if n_args == 2:  # 未指定大小时使用原始尺寸
+            if len(args) == 2:  # 使用原始尺寸
                 dw, dh = sw, sh
 
         with self.canvas:
@@ -1113,14 +1111,12 @@ class Canvas2DContext(Widget):
             Color(1, 1, 1, 1)
             Rectangle(
                 texture=source_region,
-                pos=(dx, -dy),  # 使用Canvas坐标系中的dy
+                pos=(dx, -dy),
                 size=(dw, -dh) if dh else (sw, -sh)
             )
             PopMatrix()
 
-    #---------- 状态管理 ----------
     def save(self) -> None:
-        """保存当前绘图状态"""
         state = {
             'fill_style': self._fill_style,
             'stroke_style': self._stroke_style,
@@ -1142,14 +1138,11 @@ class Canvas2DContext(Widget):
         self._state_stack.append(state)
 
     def restore(self) -> None:
-        """恢复之前保存的绘图状态"""
-        if not self._state_stack:
-            return
         state = self._state_stack.pop()
         self._fill_style = state['fill_style']
         self._stroke_style = state['stroke_style']
         self._line_width = state['line_width']
-        self.font = state['font']  # 触发font setter以更新相关属性
+        self.font = state['font']
         self._text_align = state['text_align']
         self._text_baseline = state['text_baseline']
         self.clip_path = state['clip_path']
@@ -1164,6 +1157,7 @@ class Canvas2DContext(Widget):
         self._enableGlFlip = state['enableGlFlip']
 
     def regFont(self, name: str, path: str) -> None:
+        #注册字体
         LabelBase.register(
             name=name,
             fn_regular=path
@@ -1184,7 +1178,7 @@ if __name__ == '__main__':
         while True:
             with ctx:
                 ctx.reset()
-                
+
                 ctx.beginPath()
                 ctx.strokeStyle = 'blue'
                 ctx.moveTo(20, 20)
