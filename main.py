@@ -1189,6 +1189,7 @@ if __name__ == '__main__':
                 ctx.strokeStyle = 'red'
                 ctx.moveTo(20, 20)
                 ctx.lineTo(120, 120)
+                ctx.stroke()
             time.sleep(1 / 60)
 
     Thread(target = draw, daemon = True).start()
