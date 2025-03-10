@@ -1,12 +1,10 @@
 from kivy.app import App
-from kivy.core.text import Label as CoreLabel
+from kivy.core.window import Window
+from kivy.core.text import Label as CoreLabel, LabelBase
 from kivy.core.image import Image as CoreImage
-from kivy.core.text.markup import MarkupLabel
+from kivy.clock import Clock
 from kivy.uix.widget import Widget
-from kivy.uix.textinput import TextInput
 from kivy.graphics.texture import Texture
-from kivy.graphics.transformation import Matrix
-from kivy.graphics.context_instructions import PushState, PopState
 from kivy.graphics.stencil_instructions import StencilPush, StencilPop, StencilUse
 from kivy.graphics import (
     RoundedRectangle, Color, Rectangle, Line,
@@ -17,6 +15,9 @@ from kivy.graphics import (
 import re
 import math
 import copy
+import numpy as np
+from threading import Thread
+from functools import wraps
 
 class CSSColorParser:
     COLORS = {
@@ -474,25 +475,59 @@ class TextMetrics:
 class Canvas2DContext(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._textureFlipList = []
 
-        self._rotation = 0
-        self._scale_x = 1
-        self._scale_y = 1
-        self._translate_x = 0
-        self._translate_y = 0
+        self._lock = False
 
-        with self.canvas:
-            Color(1, 1, 1, 1)
-            self.___rect = Rectangle(pos=self.pos, size=self.size) # 白色背景
+        self._lastFuncResult = None
+
+        self._methodsPatchList = [
+            'fillText', 'strokeText', 'measureText',
+            'clearRect', 'fillRect', 'strokeRect',
+            'beginPath', 'closePath', 'moveTo', 'lineTo',
+            'rect', 'roundRect', 'fill', 'stroke',
+            'clip', 'rotate', 'scale', 'translate',
+            'setTransform', 'resetTransform', 'loadTexture',
+            'drawImage', 'save', 'restore', 'reset'
+        ]
+
+        self._propertiesPatchList = [
+            'fillStyle',
+            'strokeStyle',
+            'lineWidth', 
+            'font', 
+            'textAlign', 
+            'textBaseline',
+            'filter',
+            'enableGlFlip'
+        ]
+
+        self._origMethodsList = {}
+        self._warppedMethodsList = {}
+        self._origPropertiesList = {}
+        self._wrappedPropertiesList = {}
+
+        self.reset()
 
         self.bind(pos=self._update_rect, size=self._update_rect)
 
-        self.reset()
+        self.size = Window.size
+
+        self._patchAll()
+
+    def __enter__(self):
+        self.beginDraw()
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.endDraw()
     
     def _update_rect(self, *args):
         self.___rect.pos = self.pos
         self.___rect.size = self.size
-
+        self._applyMatrix()
+        self.canvas.ask_update()
+    
     #---------- 样式属性 ----------
     
     @property
@@ -548,6 +583,26 @@ class Canvas2DContext(Widget):
         #设置描边颜色 支持CSS颜色格式
         self._stroke_style = CSSColorParser.parse_color(color_str)
 
+    @property
+    def filter(self) -> str:
+        """暂时不实现"""
+        return self._filter
+
+    @filter.setter
+    def filter(self, value: str) -> None:
+        self._filter = value
+    
+    @property
+    def enableGlFlip(self) -> str:
+        # 是否使用GPU加速翻转纹理
+        return self._enableGlFlip
+
+    @enableGlFlip.setter
+    def enableGlFlip(self, value: bool) -> None:
+        self._enableGlFlip = value
+
+    #以下为内部方法
+
     def _draw_shape(self, fill=False):
         """绘制预定义形状"""
         if self._current_shape:
@@ -560,6 +615,71 @@ class Canvas2DContext(Widget):
                 return RoundedRectangle(pos=(x, y), size=(w, h), radius=[r])
         return None
 
+    def _patchAll(self):
+        for method in self._methodsPatchList:
+            self._wrap_method(method)
+
+        for prop in self._propertiesPatchList:
+            self._wrap_property_setter(prop)
+
+    def _restoreAll(self):
+        for method in self._methodsPatchList:
+            self._restore_method(method)
+
+        for prop in self._propertiesPatchList:
+            self._restore_property_setter(prop)
+
+    def _wrap_method(self, method_name):
+        if method_name not in self._origMethodsList or method_name not in self._warppedMethodsList:
+            self._origMethodsList[method_name] = getattr(self, method_name)
+            self._warppedMethodsList[method_name] = self._create_scheduled_method(self._origMethodsList[method_name])
+        setattr(self, method_name, self._warppedMethodsList[method_name])
+
+    def _restore_method(self, method_name):
+        setattr(self, method_name, self._origMethodsList[method_name])
+
+    def _create_scheduled_method(self, original_func):
+        @wraps(original_func)
+        def wrapper(*args, **kwargs):
+            self._drawInsts.append(
+                (original_func, (args, kwargs))
+            )
+            if original_func.__name__ in [
+                'measureText', 'loadTexture'
+            ]:
+                self.endDraw()
+                self.beginDraw()
+                
+                result = self._lastFuncResult
+                self._lastFuncResult = None
+                return result
+        return wrapper
+    
+    def _wrap_property_setter(self, prop_name):
+        prop = getattr(type(self), prop_name)
+        if isinstance(prop, property) and prop.fset:
+            if prop_name not in self._origPropertiesList or prop_name not in self._wrappedPropertiesList:
+                self._origPropertiesList[prop_name] = prop.fset
+                self._wrappedPropertiesList[prop_name] = self._create_scheduled_method(self._origPropertiesList[prop_name])
+            new_prop = property(
+                fget=prop.fget,
+                fset=self._wrappedPropertiesList[prop_name],
+                fdel=prop.fdel,
+                doc=prop.__doc__
+            )
+            setattr(type(self), prop_name, new_prop)
+
+    def _restore_property_setter(self, prop_name):
+        prop = getattr(type(self), prop_name)
+        if isinstance(prop, property) and prop.fset:
+            new_prop = property(
+                fget=prop.fget,
+                fset=self._origPropertiesList[prop_name],
+                fdel=prop.fdel,
+                doc=prop.__doc__
+            )
+            setattr(type(self), prop_name, new_prop)
+    
     def _apply_clip(self):
         """应用保存的裁剪路径到画布"""
         if not self.clip_path:
@@ -587,16 +707,6 @@ class Canvas2DContext(Widget):
             StencilUse()
             StencilPop()
             PopMatrix()
-
-    def _load_texture(self, image):
-        """加载不同格式的图像源为纹理"""
-        if isinstance(image, str):
-            return CoreImage(image).texture
-        if isinstance(image, Texture):
-            return image
-        if hasattr(image, "texture"):
-            return image.texture
-        raise TypeError("Unsupported image type")
     
     def _rotatectx(self):
         Rotate(angle=self._rotation, origin=self.center)
@@ -608,11 +718,48 @@ class Canvas2DContext(Widget):
         Translate(x=self._translate_x, y=self._translate_y)
 
     def _applyMatrix(self):
+        Translate(0, Window.height)
         self._rotatectx()
         self._scalectx()
         self._translatectx()
 
+    def _exce_draw(self, *args, **kwargs):
+        self._restoreAll()
+        for inst in self._drawInsts:
+            mtd, args = inst
+            self._lastFuncResult = mtd(*args[0], **args[1])
+        self._patchAll()
+        self._lock = False
+
+    def _flip(self, texture: Texture):
+        if self._enableGlFlip:
+            texture.flip_vertical()
+            self._textureFlipList.append(texture.id)
+            return texture
+        pixels = np.frombuffer(texture.pixels, dtype=np.uint8)
+        pixels = pixels.reshape((texture.height, texture.width, 4))
+        flipped_pixels = pixels.tobytes()
+        texture = Texture.create(size=texture.size, colorfmt='rgba')
+        texture.blit_buffer(flipped_pixels, colorfmt='rgba')
+        self._textureFlipList.append(texture.id)
+        return texture
+
+    #以下为暴露的方法
+
+    def beginDraw(self):
+        while self._lock: pass
+        self._drawInsts = []
+
+    def endDraw(self):
+        self._lock = True
+        Clock.schedule_once(self._exce_draw, 0)
+
     def reset(self):
+        self._rotation = 0
+        self._scale_x = 1
+        self._scale_y = 1
+        self._translate_x = 0
+        self._translate_y = 0
         self._fill_style = (0, 0, 0, 1)
         self._stroke_style = (0, 0, 0, 1)
         self._line_width = 1.0
@@ -625,6 +772,13 @@ class Canvas2DContext(Widget):
         self.clip_path = None
         self._state_stack = []
         self._filter = None
+        self._enableGlFlip = True
+        
+        self.canvas.clear()
+
+        with self.canvas:
+            Color(1, 1, 1, 1)
+            self.___rect = Rectangle(pos=self.pos, size=self.size) # 白色背景
     
     #---------- 基础绘图 API ----------
     def clearRect(self, x, y, width, height):
@@ -633,7 +787,7 @@ class Canvas2DContext(Widget):
             PushMatrix()
             self._applyMatrix()
             Color(1, 1, 1, 1)
-            Rectangle(pos=(x, y), size=(width, height))
+            Rectangle(pos=(x, -y), size=(width, -height))
             PopMatrix()
 
     def fillRect(self, x, y, width, height):
@@ -641,7 +795,7 @@ class Canvas2DContext(Widget):
             PushMatrix()
             self._applyMatrix()
             Color(*self.fillStyle)
-            Rectangle(pos=(x, y), size=(width, height))
+            Rectangle(pos=(x, -y), size=(width, -height))
             PopMatrix()
 
     def strokeRect(self, x, y, width, height):
@@ -649,16 +803,17 @@ class Canvas2DContext(Widget):
             PushMatrix()
             self._applyMatrix()
             Color(*self.strokeStyle)
-            Line(width=self.lineWidth, rectangle=(x, y, width, height), close=True)
+            Line(width=self.lineWidth, rectangle=(x, -y, width, -height), close=True)
             PopMatrix()
 
     #---------- 文本 API ----------
     def fillText(self, text: str, x: float, y: float, max_width: float = None) -> None:
+        y = -y
         label = CoreLabel(text=text, font_size=self.font_size, font_name=self.font_name.split(',')[0], valign='top')
         label.refresh()
-        if not label.texture: return
 
-        texture = label.texture
+        texture = self._flip(label.texture)
+
         text_width, text_height = texture.width, texture.height
         scale_factor = min(max_width / text_width, 1) if max_width else 1.0
 
@@ -666,25 +821,23 @@ class Canvas2DContext(Widget):
         descent = self.font_size * 0.2
         total_height = ascent + descent
 
-        if self.textBaseline == 'top':
-            y_adjust = 0
-        elif self.textBaseline == 'middle':
-            y_adjust = -total_height / 2
-        elif self.textBaseline == 'bottom':
-            y_adjust = -total_height
-        else:
-            y_adjust = -ascent
-
-        pos_y = y + y_adjust
-        pos_x = x
+        match self.textBaseline:
+            case 'top':
+                y_adjust = 0
+            case 'middle':
+                y_adjust = -total_height / 2
+            case 'bottom':
+                y_adjust = -total_height
+            case _:
+                y_adjust = -ascent
 
         with self.canvas:
             PushMatrix()
             self._applyMatrix()
             Color(*self.fillStyle)
             Rectangle(
-                pos=(pos_x, pos_y),
-                size=(text_width * scale_factor, text_height * scale_factor),
+                pos=(x, y + y_adjust),
+                size=(text_width * scale_factor, -text_height * scale_factor),
                 texture=texture
             )
             PopMatrix()
@@ -692,6 +845,7 @@ class Canvas2DContext(Widget):
 
     def strokeText(self, text: str, x: float, y: float, max_width: float = None) -> None:
         """实现描边文本功能"""
+        y = -y
         # 创建核心标签对象
         label = CoreLabel(
             text=text,
@@ -727,16 +881,17 @@ class Canvas2DContext(Widget):
         descent = self.font_size * 0.2  # 假设descender占20%
         total_height = ascent + descent
 
-        if self.textBaseline == 'top':
-            y_adjust = 0
-        elif self.textBaseline == 'middle':
-            y_adjust = -total_height / 2
-        elif self.textBaseline == 'bottom':
-            y_adjust = -total_height
-        elif self.textBaseline == 'alphabetic':
-            y_adjust = -ascent
-        else:
-            y_adjust = -ascent
+        match self.textBaseline:
+            case 'top':
+                y_adjust = 0
+            case 'middle':
+                y_adjust = -total_height / 2
+            case 'bottom':
+                y_adjust = -total_height
+            case 'alphabetic':
+                y_adjust = -ascent
+            case _:
+                y_adjust = -ascent
 
         # 应用坐标调整
         pos = (x, y + y_adjust)
@@ -792,14 +947,14 @@ class Canvas2DContext(Widget):
                 current_subpath.append(current_subpath[0])
 
     def moveTo(self, x: float, y: float) -> None:
-        self.current_path.append([(x, y)])  # 新子路径以当前点开始
+        self.current_path.append([(x, -y)])  # 新子路径以当前点开始
 
     def lineTo(self, x, y):
         """添加直线路径"""
         if not self.current_path:
             self.moveTo(x, y)  # 无子路径时自动创建
         else:
-            self.current_path[-1].append((x, y))
+            self.current_path[-1].append((x, -y))
 
     def rect(self, x, y, w, h):
         """添加矩形路径"""
@@ -815,37 +970,36 @@ class Canvas2DContext(Widget):
     def fill(self, fill_rule: str = None) -> None:
         """填充所有子路径"""
         with self.canvas:
-            PushState()
-            self._applyMatrix()
+            PushMatrix()       # 开启变换上下文
+            self._applyMatrix()  # 应用坐标系转换
             self._apply_clip()
-            
             Color(*self.fillStyle)
             for subpath in self.current_path:
                 if len(subpath) >= 3:
-                    points = [coord for p in subpath for coord in p]
-                    vertices = [x for p in subpath for x in (*p, 0, 0)]
+                    vertices = []
+                    for point in subpath:
+                        x, y = point
+                        vertices.extend([x, y, 0, 0])  # 正确构建顶点数据
                     Mesh(
                         vertices=vertices,
                         indices=list(range(len(subpath))),
                         mode='triangle_fan'
                     )
-            
-            PopState()
+            PopMatrix()
 
     def stroke(self) -> None:
         with self.canvas:
-            PushState()
-            self._applyMatrix()  # 应用所有变换（旋转/缩放/平移）
+            PushMatrix()       # 开启变换上下文
+            self._applyMatrix()  # 应用坐标系转换
             self._apply_clip()
-            
             Color(*self.strokeStyle)
             for subpath in self.current_path:
                 if len(subpath) >= 2:
-                    # 直接使用原始坐标，由变换矩阵处理
-                    points = [coord for p in subpath for coord in p]
+                    points = []
+                    for point in subpath:
+                        points.extend(point)  # 直接展开坐标
                     Line(points=points, width=self.lineWidth)
-            
-            PopState()
+            PopMatrix()
 
     def clip(self, fill_rule: str = None) -> None:
         """裁剪路径，保存当前路径为裁剪区域"""
@@ -900,6 +1054,22 @@ class Canvas2DContext(Widget):
         pass
 
     #---------- 图像 API ----------
+    def loadTexture(self, image):
+        #加载不同格式的图像源为纹理
+        if isinstance(image, str):
+            texture = CoreImage(image).texture
+            texture = self._flip(texture)
+            return texture
+        if isinstance(image, Texture):
+            if not image.id in self._textureFlipList:
+                image = self._flip(image)
+            return image
+        if hasattr(image, "texture"):
+            if not image.texture.id in self._textureFlipList:
+                return self._flip(image.texture)
+            return image.texture
+        raise TypeError("Unsupported image type")
+    
     def drawImage(self, image, *args):
         """
         支持三种重载形式：
@@ -923,7 +1093,7 @@ class Canvas2DContext(Widget):
             raise ValueError("Invalid arguments. Expected 2, 4 or 8 parameters")
 
         # 加载纹理
-        texture = self._load_texture(image)
+        texture = self.loadTexture(image)
         
         # 处理源矩形
         if source_rect:
@@ -943,8 +1113,8 @@ class Canvas2DContext(Widget):
             Color(1, 1, 1, 1)
             Rectangle(
                 texture=source_region,
-                pos=(dx, dy),  # 使用Canvas坐标系中的dy
-                size=(dw, dh) if dh else (sw, sh)
+                pos=(dx, -dy),  # 使用Canvas坐标系中的dy
+                size=(dw, -dh) if dh else (sw, -sh)
             )
             PopMatrix()
 
@@ -966,7 +1136,8 @@ class Canvas2DContext(Widget):
             'translate_y': self._translate_y,
             'current_path': copy.deepcopy(self.current_path),
             'filter': self._filter,
-            'global_alpha': self.global_alpha,
+            'global_alpha': self.globalAlpha,
+            'enableGlFlip': self._enableGlFlip
         }
         self._state_stack.append(state)
 
@@ -989,29 +1160,42 @@ class Canvas2DContext(Widget):
         self._translate_y = state['translate_y']
         self.current_path = copy.deepcopy(state['current_path'])
         self._filter = state['filter']
-        self.global_alpha = state['global_alpha']
+        self.globalAlpha = state['global_alpha']
+        self._enableGlFlip = state['enableGlFlip']
 
-    #---------- 滤镜 ----------
-    @property
-    def filter(self) -> str:
-        """暂时不实现"""
-        return self._filter
-
-    @filter.setter
-    def filter(self, value: str) -> None:
-        self._filter = value
+    def regFont(self, name: str, path: str) -> None:
+        LabelBase.register(
+            name=name,
+            fn_regular=path
+        )
 
 if __name__ == '__main__':
     ctx = Canvas2DContext()
-    from kivy.core.text import LabelBase
-    LabelBase.register(
-        name='Phigros',  # 字体族名称
-        fn_regular='font.ttf'  # 系统字体文件路径
-    )
     class ctxApp(App):
-        def build(self, **kwargs):
-            ctx.font = '50px Phigros'
-            ctx.fillText('Hello World', 100, 100)
-            return ctx
+        def build(self, **kwargs): return ctx
+
+    app = ctxApp()
     
-    ctxApp().run()
+    def draw():
+        import time
+        with ctx:
+            #ico = ctx.loadTexture('icon.ico')
+            ctx.regFont('Phigros', 'font.ttf')
+        while True:
+            with ctx:
+                ctx.reset()
+                
+                ctx.beginPath()
+                ctx.strokeStyle = 'blue'
+                ctx.moveTo(20, 20)
+                ctx.lineTo(200, 20)
+                ctx.stroke()
+
+                ctx.beginPath()
+                ctx.strokeStyle = 'red'
+                ctx.moveTo(20, 20)
+                ctx.lineTo(120, 120)
+            time.sleep(1 / 60)
+
+    Thread(target = draw, daemon = True).start()
+    app.run()
