@@ -1167,8 +1167,31 @@ if __name__ == '__main__':
 
                 ctx.font = '20px Phigros'
 
-                
+                ctx.strokeStyle = 'red'
+                ctx.beginPath()
+                ctx.roundRect(10, 20, 150, 100, 0)
+                ctx.stroke()
 
+                ctx.strokeStyle = 'blue'
+                ctx.beginPath()
+                ctx.roundRect(10, 20, 150, 100, [40])
+                ctx.stroke()
+
+                ctx.strokeStyle = 'orange'
+                ctx.beginPath()
+                ctx.roundRect(10, 150, 150, 100, [10, 40])
+                ctx.stroke()
+
+                ctx.strokeStyle = 'green'
+                ctx.beginPath()
+                ctx.roundRect(400, 20, 200, 100, [0, 30, 50, 60])
+
+                ctx.stroke()
+
+                ctx.strokeStyle = 'magenta'
+                ctx.beginPath()
+                ctx.roundRect(400, 150, -200, 100, [0, 30, 50, 60])
+                ctx.stroke()
             time.sleep(1 / 60)
 
     Thread(target = draw, daemon = True).start()

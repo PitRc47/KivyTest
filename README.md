@@ -19,7 +19,7 @@ TODO:
 - [x] lineWidth
 - [x] font
 - [x] textAlign
-- [ ] textBaseline
+- [ ] textBaseline （有bug）
 - [x] fillStyle
 - [x] strokeStyle
 
@@ -29,7 +29,7 @@ TODO:
 - [x] moveTo()
 - [x] lineTo()
 - [x] rect()
-- [x] roundRect()
+- [ ] roundRect()
 - [x] fill()
 - [x] stroke()
 - [ ] clip() ?
@@ -41,12 +41,12 @@ TODO:
 - [x] resetTransform() （待测试）
 
 ### 图像
-- [x] drawImage() （待整理）
+- [x] drawImage()
 
 ### 状态管理
-- [x] save() （待测试）
-- [x] restore() （待测试）
-- [x] reset() （待测试）
+- [x] save()
+- [x] restore()
+- [x] reset()
 
 未实现
 ---
